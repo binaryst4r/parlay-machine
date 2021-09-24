@@ -1,10 +1,17 @@
 import React from 'react'
 import styled, { css } from 'styled-components'
-import Navbar from 'react-bootstrap/Navbar'
-import Nav from 'react-bootstrap/Nav'
-import NavDropdown from 'react-bootstrap/NavDropdown'
-import Container from 'react-bootstrap/Container'
+import Button from 'react-bootstrap/Button'
+import Dropdown from 'react-bootstrap/Dropdown'
+import Badge from 'react-bootstrap/Badge'
 import _ from 'lodash'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  solid,
+  regular,
+  brands,
+} from '@fortawesome/fontawesome-svg-core/import.macro' // <-- import styles to be used
+import { teamColors } from '../utils/colors'
+import moment from 'moment'
 
 function ParlayMachine() {
   const [games, setGames] = React.useState(null)
@@ -39,14 +46,14 @@ function ParlayMachine() {
       }
       return matchup
     })
-    console.log(newMatchups)
+
     setMatchups(newMatchups)
   }
 
   const createMatchups = (weekNumber) => {
     setWeek(weekNumber)
     setMatchups(
-      games[weekNumber].map((game) => {
+      _.sortBy(games[weekNumber], 'DateTime').map((game) => {
         const matchup = Object.assign({}, game, { pickedWinner: null })
         return matchup
       }),
@@ -69,30 +76,46 @@ function ParlayMachine() {
       })
   }, [])
 
-  console.log(matchups, 'rerendering')
-
   return (
     <>
-      <Navbar bg="light" expand="lg">
-        <Container>
-          <Navbar.Brand href="/">ParlayMachine</Navbar.Brand>
-          <Navbar.Toggle aria-controls="basic-navbar-nav" />
-          <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="me-auto"></Nav>
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
       <FlexContainer width={350}>
-        <div>
-          <select value={week} onChange={(e) => createMatchups(e.target.value)}>
-            <option value={null}>Select Week</option>
-            {_.keys(games).map((weekNumber) => (
-              <option key={weekNumber} value={weekNumber}>
-                Week {weekNumber}
-              </option>
-            ))}
-          </select>
-          {matchups && <button onClick={randomize}>Shuffle Picks</button>}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            width: '100%',
+            marginBottom: '30px',
+          }}
+        >
+          <Dropdown>
+            <Dropdown.Toggle variant="light">
+              {week ? `Week ${week}` : `Select Week`}
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu>
+              {_.keys(games).map((weekNumber) => (
+                <Dropdown.Item
+                  onClick={() => createMatchups(weekNumber)}
+                  key={weekNumber}
+                  value={weekNumber}
+                >
+                  Week {weekNumber}
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+          <div>
+            <Button
+              disabled={!week}
+              variant="warning"
+              onClick={() => createMatchups(week)}
+            >
+              Clear <FontAwesomeIcon icon={solid('refresh')} />
+            </Button>
+            <Button disabled={!week} variant="primary" onClick={randomize}>
+              Shuffle <FontAwesomeIcon icon={solid('shuffle')} />
+            </Button>
+          </div>
         </div>
 
         {matchups?.map((matchup, index) => {
@@ -100,11 +123,30 @@ function ParlayMachine() {
             const matchupLocked = lockedGames.includes(matchup.GameKey)
             return (
               <GameRow>
+                <span
+                  style={{
+                    position: 'absolute',
+                    margin: 'auto',
+                    left: 0,
+                    right: 0,
+                    width: '25%',
+                    textAlign: 'center',
+                    fontSize: '12px',
+                    backgroundColor: '#9ef01a'
+                  }}
+                  bg="primary"
+                >
+                  {moment(matchup.DateTime).format('ddd h a')}
+                </span>
                 <TeamSection
                   style={{
+                    color:
+                      matchup.pickedWinner === matchup.AwayTeam
+                        ? teamColors[matchup.AwayTeam].text
+                        : '',
                     backgroundColor:
                       matchup.pickedWinner === matchup.AwayTeam
-                        ? '#9ef01a'
+                        ? teamColors[matchup.AwayTeam].bg
                         : '',
                   }}
                   onClick={() => pickWinner(matchup, matchup.AwayTeam, index)}
@@ -125,13 +167,21 @@ function ParlayMachine() {
                       : lockGame(matchup.GameKey)
                   }}
                 >
-                  {matchupLocked ? 'L' : '@'}
+                  {matchupLocked ? (
+                    <FontAwesomeIcon icon={solid('lock')} />
+                  ) : (
+                    '@'
+                  )}
                 </At>
                 <TeamSection
                   style={{
+                    color:
+                      matchup.pickedWinner === matchup.HomeTeam
+                        ? teamColors[matchup.HomeTeam].text
+                        : '',
                     backgroundColor:
                       matchup.pickedWinner === matchup.HomeTeam
-                        ? '#9ef01a'
+                        ? teamColors[matchup.HomeTeam].bg
                         : '',
                   }}
                   onClick={() => pickWinner(matchup, matchup.HomeTeam, index)}
@@ -200,6 +250,7 @@ const At = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 `
 
 const Odds = styled.span`
