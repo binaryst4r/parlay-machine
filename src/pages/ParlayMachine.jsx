@@ -21,7 +21,6 @@ function ParlayMachine() {
 
   const pickWinner = (matchup, winner, index) => {
     let newMatchups = matchups
-    console.log(matchups[index])
     newMatchups[index] = Object.assign({}, matchup, { pickedWinner: winner })
     setMatchups([...newMatchups])
   }
@@ -36,12 +35,32 @@ function ParlayMachine() {
     setLockedGames([...lockedGames])
   }
 
-  const randomize = () => {
+  const getProbableWinner = (matchup) => {
+    let winner = matchup.HomeTeam
+    if (matchup.HomeTeamMoneyLine > matchup.AwayTeamMoneyLine) {
+      winner = matchup.AwayTeam
+    }
+    return winner
+  }
+
+  const randomize = (onlyHeavyFavorites = false) => {
     const newMatchups = matchups.map((matchup) => {
+      const oddsDifferential = Math.abs(_.subtract(matchup.HomeTeamMoneyLine, matchup.AwayTeamMoneyLine))
       const teams = [matchup.HomeTeam, matchup.AwayTeam]
       if (!lockedGames.includes(matchup.GameKey)) {
+        let pickedWinner
+        const randomWinner = teams[Math.round(Math.random())]
+        let probableWinner = getProbableWinner(matchup)
+        if (oddsDifferential > 700) {
+          pickedWinner = probableWinner
+        } else if (onlyHeavyFavorites) {
+          pickedWinner = null
+        } else {
+          pickedWinner = randomWinner
+        }
+
         return Object.assign({}, matchup, {
-          pickedWinner: teams[Math.round(Math.random())],
+          pickedWinner
         })
       }
       return matchup
@@ -75,7 +94,7 @@ function ParlayMachine() {
         setGames(_.groupBy(data, 'Week'))
       })
   }, [])
-
+  console.log(lockedGames, 'hey')
   return (
     <>
       <FlexContainer width={350}>
@@ -104,7 +123,7 @@ function ParlayMachine() {
               ))}
             </Dropdown.Menu>
           </Dropdown>
-          <div>
+          <div style={{display: 'flex'}}>
             <Button
               disabled={!week}
               variant="warning"
@@ -112,9 +131,17 @@ function ParlayMachine() {
             >
               Clear <FontAwesomeIcon icon={solid('refresh')} />
             </Button>
-            <Button disabled={!week} variant="primary" onClick={randomize}>
-              Shuffle <FontAwesomeIcon icon={solid('shuffle')} />
-            </Button>
+            {week &&
+              <Dropdown>
+                <Dropdown.Toggle variant="primary">
+                  <FontAwesomeIcon icon={solid('shuffle')} />
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={() => randomize()}>Shuffle All</Dropdown.Item>
+                  <Dropdown.Item onClick={() => randomize(true)}>Pick Heavy Favorites</Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            }
           </div>
         </div>
 
